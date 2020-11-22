@@ -5,9 +5,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import de.sven_wirz.springresttest.greeting.entity.Greeting;
 import de.sven_wirz.springresttest.greeting.entity.Message;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,9 +13,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -48,10 +46,7 @@ class GreetingControllerTest {
         Message expected = new Message();
         expected.setMessage("Hallo Sven!");
 
-        mockMvc.perform(post("/")
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(ow.writeValueAsString(greeting)))
+        sendGreeting(greeting)
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(content().json(ow.writeValueAsString(expected)))
@@ -60,14 +55,17 @@ class GreetingControllerTest {
 
     @Test
     void getAllMessages_should_return_list_containing_sven_greeting() throws Exception {
-        Greeting greeting = new Greeting();
-        greeting.setName("Sven");
+        Greeting svenGreeting = new Greeting();
+        svenGreeting.setName("Sven");
+
+        Greeting anonymousGreeting = new Greeting();
+        anonymousGreeting.setName("Anonymous");
 
         // Perform POST-Request to send "Sven"-Greeting
-        mockMvc.perform(post("/")
-                .accept(MediaType.APPLICATION_JSON)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(ow.writeValueAsString(greeting)));
+        sendGreeting(svenGreeting);
+
+        // Perform POST-Request to send "Anonymous"-Greeting
+        sendGreeting(anonymousGreeting);
 
         // Perform GET-Request to retrieve all greetings
         mockMvc.perform(get("/")
@@ -75,6 +73,14 @@ class GreetingControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(content().string(containsString("Hallo Sven!")));
+                .andExpect(content().string(containsString("Hallo Sven!")))
+                .andExpect(content().string(containsString("Hallo Anonymous!")));
+    }
+
+    private ResultActions sendGreeting(Greeting anonymousGreeting) throws Exception {
+        return mockMvc.perform(post("/")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(ow.writeValueAsString(anonymousGreeting)));
     }
 }
